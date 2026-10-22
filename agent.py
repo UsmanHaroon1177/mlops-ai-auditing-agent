@@ -143,7 +143,7 @@ def main() -> int:
         print("Fatal: GEMINI_API_KEY is required (see .env.example).", file=sys.stderr)
         return 2
     try:
-        report, _trace = run_agent(args.repo, api_key, os.environ.get("GEMINI_MODEL", "gemini-2.0-flash"))
+        report, _trace = run_agent(args.repo, api_key, os.environ.get("GEMINI_MODEL", "gemini-3.6-flash"))
         output = Path(args.output)
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
