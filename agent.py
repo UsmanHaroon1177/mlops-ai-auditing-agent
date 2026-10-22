@@ -58,7 +58,7 @@ def _decode_json(text: str) -> dict[str, Any]:
     return data
 
 
-def _model_response(client: Any, model: str, transcript: list[dict[str, str]]) -> dict[str, Any]:
+def _model_response(client: Any, model: str, transcript: list[dict[str, str]], verbose: bool = False) -> dict[str, Any]:
     from google.genai import types
     conversation = "\n\n".join(f"{item['role'].upper()}:\n{item['content']}" for item in transcript)
     
@@ -105,7 +105,6 @@ def validate_violations(raw: Any, tools: RepositoryTools) -> list[dict[str, Any]
         line = item["line"]
         if not isinstance(file, str) or not isinstance(line, int):
             continue
-        # A finding must be tied to exact numbered read_file output, never a search hit or README claim.
         if line not in tools.opened_files.get(file, set()):
             continue
         if item["severity"] not in ALLOWED_SEVERITIES:
@@ -120,7 +119,7 @@ def validate_violations(raw: Any, tools: RepositoryTools) -> list[dict[str, Any]
     return valid
 
 
-def run_agent(repo_url: str, api_key: str, model: str) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+def run_agent(repo_url: str, api_key: str, model: str, max_steps: int = MAX_STEPS, verbose: bool = False) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     try:
         from google import genai
     except ImportError as exc:
@@ -130,10 +129,11 @@ def run_agent(repo_url: str, api_key: str, model: str) -> tuple[dict[str, Any], 
     try:
         tools.prepare()
         client = genai.Client(api_key=api_key)
-        for _ in range(MAX_STEPS):
-            decision = _model_response(client, model, transcript)
+        for step_idx in range(max_steps):
+            if verbose:
+                print(f"[Agent] Step {step_idx + 1}/{max_steps}", file=sys.stderr)
+            decision = _model_response(client, model, transcript, verbose)
             if decision.get("action") == "final":
-                # A forced guard against README-led early completion.
                 required_reads = tools.mandatory_files()
                 unread = sorted(required_reads - set(tools.opened_files))
                 if unread:
@@ -149,12 +149,14 @@ def run_agent(repo_url: str, api_key: str, model: str) -> tuple[dict[str, Any], 
                 transcript.append({"role": "tool", "content": "Tool arguments must be an object."})
                 continue
             try:
+                if verbose:
+                    print(f"[Tool Execution] Calling {decision['tool']} with {arguments}", file=sys.stderr)
                 output = tools.execute(decision["tool"], arguments)
             except ToolError as exc:
                 output = f"TOOL ERROR: {exc}"
             transcript.append({"role": "assistant", "content": json.dumps(decision)})
             transcript.append({"role": "tool", "content": f"{decision['tool']} OUTPUT:\n{output}"})
-        raise ToolError(f"agent reached its {MAX_STEPS}-step safety limit without a final report")
+        raise ToolError(f"agent reached its {max_steps}-step safety limit without a final report")
     finally:
         tools.close()
 
@@ -163,21 +165,34 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Evidence-first DevOps repository auditing agent")
     parser.add_argument("--repo", required=True, help="Public https://github.com/owner/repository URL")
     parser.add_argument("--output", required=True, help="Path to JSON report")
+    parser.add_argument("--trace", help="Path to JSONL trace file")
+    parser.add_argument("--max-turns", type=int, default=MAX_STEPS, help="Maximum number of turns")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
     args = parser.parse_args()
+    
     try:
         from dotenv import load_dotenv
         load_dotenv()
     except ImportError:
         pass
+        
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         print("Fatal: GEMINI_API_KEY is required (see .env.example).", file=sys.stderr)
         return 2
+        
     try:
         report, _trace = run_agent(args.repo, api_key, os.environ.get("GEMINI_MODEL", "gemini-flash-lite-latest"))
         output = Path(args.output)
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+        
+        # Write trace JSONL if requested
+        if args.trace:
+            trace_path = Path(args.trace)
+            trace_path.parent.mkdir(parents=True, exist_ok=True)
+            trace_path.write_text("\n".join(json.dumps(t) for t in trace) + "\n", encoding="utf-8")
+            
         return 0
     except ToolError as exc:
         print(f"Fatal: {exc}", file=sys.stderr)
