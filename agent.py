@@ -6,6 +6,7 @@ import argparse
 import json
 import os
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -28,11 +29,28 @@ or
 
 
 def _decode_json(text: str) -> dict[str, Any]:
+    if not text or not text.strip():
+        raise ToolError("LLM returned empty response")
+    
     text = text.strip()
     if text.startswith("```"):
-        text = text.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+        parts = text.split("```")
+        if len(parts) >= 2:
+            text = parts[1]
+            if text.startswith("json"):
+                text = text[4:]
+        text = text.strip()
+    
+    # Gracefully extract the first JSON object if there's any extra surrounding text
     try:
-        data = json.loads(text)
+        start_idx = text.index("{")
+        end_idx = text.rindex("}")
+        text = text[start_idx:end_idx + 1]
+    except ValueError:
+        pass
+
+    try:
+        data, _idx = json.JSONDecoder().raw_decode(text)
     except json.JSONDecodeError as exc:
         raise ToolError(f"LLM returned invalid JSON: {exc.msg}") from exc
     if not isinstance(data, dict):
@@ -43,21 +61,34 @@ def _decode_json(text: str) -> dict[str, Any]:
 def _model_response(client: Any, model: str, transcript: list[dict[str, str]]) -> dict[str, Any]:
     from google.genai import types
     conversation = "\n\n".join(f"{item['role'].upper()}:\n{item['content']}" for item in transcript)
-    try:
-        response = client.models.generate_content(
-            model=model,
-            contents=conversation,
-            config=types.GenerateContentConfig(
-                system_instruction=SYSTEM_PROMPT,
-                temperature=0.1,
-                response_mime_type="application/json",
-            ),
-        )
-    except Exception as exc:  # provider SDK errors vary by version
-        raise ToolError(f"Gemini request failed: {exc}") from exc
-    if not response.text:
-        raise ToolError("Gemini returned no text")
-    return _decode_json(response.text)
+    
+    max_retries = 3
+    backoff_factor = 2
+    
+    for attempt in range(max_retries):
+        try:
+            response = client.models.generate_content(
+                model=model,
+                contents=conversation,
+                config=types.GenerateContentConfig(
+                    system_instruction=SYSTEM_PROMPT,
+                    temperature=0.1,
+                    response_mime_type="application/json",
+                ),
+            )
+            if not response.text:
+                raise ToolError("Gemini returned no text")
+            return _decode_json(response.text)
+        except Exception as exc:
+            err_str = str(exc)
+            # Handle temporary high demand / 503 errors gracefully with backoff
+            if "503" in err_str or "UNAVAILABLE" in err_str or "high demand" in err_str:
+                if attempt < max_retries - 1:
+                    sleep_time = backoff_factor ** (attempt + 1)
+                    print(f"\n[Warning] Model {model} is busy (503). Retrying in {sleep_time}s (Attempt {attempt + 1}/{max_retries})...", file=sys.stderr)
+                    time.sleep(sleep_time)
+                    continue
+            raise ToolError(f"Gemini request failed: {exc}") from exc
 
 
 def validate_violations(raw: Any, tools: RepositoryTools) -> list[dict[str, Any]]:
@@ -143,7 +174,7 @@ def main() -> int:
         print("Fatal: GEMINI_API_KEY is required (see .env.example).", file=sys.stderr)
         return 2
     try:
-        report, _trace = run_agent(args.repo, api_key, os.environ.get("GEMINI_MODEL", "gemini-3.6-flash"))
+        report, _trace = run_agent(args.repo, api_key, os.environ.get("GEMINI_MODEL", "gemini-flash-lite-latest"))
         output = Path(args.output)
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
@@ -155,4 +186,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
 
