@@ -20,7 +20,7 @@ $env:GEMINI_API_KEY = "your-key"
 python agent.py --repo https://github.com/owner/repository --output report.json
 ```
 
-`GEMINI_MODEL` is optional and defaults to `gemini-2.0-flash`. Availability and quotas are determined by Google; the agent does not require a paid Gemini plan.
+`GEMINI_MODEL` is optional and defaults to `gemini-3.6-flash`. Availability and quotas are determined by Google; the agent does not require a paid Gemini plan.
 
 ## What the agent does
 
