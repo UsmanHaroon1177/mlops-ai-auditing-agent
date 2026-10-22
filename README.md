@@ -20,7 +20,7 @@ $env:GEMINI_API_KEY = "your-key"
 python agent.py --repo https://github.com/owner/repository --output report.json
 ```
 
-`GEMINI_MODEL` is optional and defaults to `gemini-3.6-flash`. Availability and quotas are determined by Google; the agent does not require a paid Gemini plan.
+`GEMINI_MODEL` is optional and defaults to `gemini-flash-lite-latest`. Availability and quotas are determined by Google; the agent does not require a paid Gemini plan.
 
 ## What the agent does
 
@@ -65,4 +65,5 @@ The tests verify mandatory-file tagging, redaction, line-level proof enforcement
 ## Limitations and safe behavior
 
 The repository must be public and must use an HTTPS `github.com/owner/repository` URL. A failed clone, invalid URL, API error, or exhausted agent step limit exits nonzero without writing a fabricated report. The agent does not infer remote-only controls such as GitHub branch protection from repository files.
+
 
