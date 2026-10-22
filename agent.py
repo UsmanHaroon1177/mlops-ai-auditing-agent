@@ -182,7 +182,13 @@ def main() -> int:
         return 2
         
     try:
-        report, _trace = run_agent(args.repo, api_key, os.environ.get("GEMINI_MODEL", "gemini-flash-lite-latest"))
+        report, trace = run_agent(
+            repo_url=args.repo,
+            api_key=api_key,
+            model=os.environ.get("GEMINI_MODEL", "gemini-3.5-flash"),
+            max_steps=args.max_turns,
+            verbose=args.verbose
+        )
         output = Path(args.output)
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
