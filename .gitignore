@@ -1,9 +1,13 @@
 .env
+.venv/
+venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
 .pytest-tmp/
 .ruff_cache/
+# local audit output (sample_report.json is the one committed example)
 report.json
-
-
+reports/
+traces/
+*.trace.jsonl
