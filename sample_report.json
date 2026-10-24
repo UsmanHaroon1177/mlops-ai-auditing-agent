@@ -1,5 +1,95 @@
 {
-  "repository": "https://github.com/octocat/Hello-World",
-  "violations": []
+  "repository": "https://github.com/paastha1/cicd-test-repo",
+  "violations": [
+    {
+      "rule_id": "SEC-001",
+      "category": "security",
+      "severity": "high",
+      "file": ".github/workflows/ci.yml",
+      "line": 25,
+      "description": "Secrets echoed to logs",
+      "evidence": "Echoing GITHUB_TOKEN, NPM_TOKEN, and running printenv in ci.yml",
+      "recommendation": "Remove debugging commands that print sensitive tokens or environment variables."
+    },
+    {
+      "rule_id": "BLD-001",
+      "category": "build_release",
+      "severity": "high",
+      "file": ".github/workflows/ci.yml",
+      "line": 29,
+      "description": "Publishing packages and logging into Docker on pull_request trigger",
+      "evidence": "Publish package and docker login steps present in ci.yml which triggers on pull_request",
+      "recommendation": "Remove publishing and deployment steps from pull_request workflows."
+    },
+    {
+      "rule_id": "SEC-002",
+      "category": "security",
+      "severity": "high",
+      "file": ".github/workflows/ci.yml",
+      "line": 34,
+      "description": "Uploading sensitive local config and credential files as artifacts",
+      "evidence": "Artifact upload path includes .env, .env.production, credentials.json in ci.yml",
+      "recommendation": "Do not upload sensitive local environment files or credentials as workflow artifacts."
+    },
+    {
+      "rule_id": "SEC-003",
+      "category": "security",
+      "severity": "critical",
+      "file": ".github/workflows/deploy.yml",
+      "line": 10,
+      "description": "Hardcoded secrets in workflow env block",
+      "evidence": "AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, DATABASE_PASSWORD, SLACK_WEBHOOK hardcoded in deploy.yml",
+      "recommendation": "Use GitHub Actions secrets (${{ secrets.SECRET_NAME }}) instead of hardcoded credential values."
+    },
+    {
+      "rule_id": "SEC-004",
+      "category": "security",
+      "severity": "high",
+      "file": ".github/workflows/deploy.yml",
+      "line": 22,
+      "description": "Secrets echoed to logs with set -x",
+      "evidence": "set -x and echoing $AWS_ACCESS_KEY_ID in deploy.yml",
+      "recommendation": "Remove tracing and direct references printing secrets in logs."
+    },
+    {
+      "rule_id": "SEC-005",
+      "category": "security",
+      "severity": "high",
+      "file": ".github/workflows/deploy.yml",
+      "line": 27,
+      "description": "Secrets exposed via verbose HTTP headers in curl",
+      "evidence": "curl -v with Authorization header containing secret in deploy.yml",
+      "recommendation": "Remove -v / --verbose flags when making requests with sensitive authorization tokens."
+    },
+    {
+      "rule_id": "SEC-006",
+      "category": "security",
+      "severity": "critical",
+      "file": ".github/workflows/release.yml",
+      "line": 10,
+      "description": "Hardcoded secrets in workflow env block",
+      "evidence": "PYPI_API_TOKEN, DOCKER_HUB_TOKEN, GH_TOKEN hardcoded in release.yml",
+      "recommendation": "Use GitHub Actions secrets (${{ secrets.SECRET_NAME }}) instead of hardcoded credential values."
+    },
+    {
+      "rule_id": "SEC-007",
+      "category": "security",
+      "severity": "high",
+      "file": ".github/workflows/release.yml",
+      "line": 23,
+      "description": "Secrets echoed to logs and verbose curl usage",
+      "evidence": "Echoing PYPI_API_TOKEN, DOCKER_HUB_TOKEN and using curl --verbose with GH_TOKEN in release.yml",
+      "recommendation": "Remove debug steps echoing tokens and verbose flag on authenticated requests."
+    },
+    {
+      "rule_id": "SEC-008",
+      "category": "security",
+      "severity": "critical",
+      "file": ".github/workflows/release.yml",
+      "line": 33,
+      "description": "Uploading private keys and local env files as artifacts",
+      "evidence": "Uploading ~/.ssh/id_rsa, private-key.pem, .env.local as artifacts in release.yml",
+      "recommendation": "Never upload private keys or local sensitive files as workflow artifacts."
+    }
+  ]
 }
-
