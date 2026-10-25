@@ -10,7 +10,7 @@ The agent implements its own **observe → reason → select tool → execute �
 
 ```bash
 # 1. get the code and install
-git clone <this repository> && cd <this repository>
+git clone https://github.com/UsmanHaroon1177/mlops-ai-auditing-agent.git && cd mlops-ai-auditing-agent
 python -m venv .venv
 source .venv/bin/activate            # Windows PowerShell: .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
@@ -151,7 +151,7 @@ python agent.py --repo https://github.com/paastha1/cicd-test-repo --output sampl
 
 ## Validation performed
 
-The agent was run against five repositories and each finding was checked against the repository's source:
+Five repositories were used for validation, and each finding was checked against the repository's source:
 
 | Repository | Kind | Observed result |
 |---|---|---|
@@ -195,3 +195,4 @@ LLM output is not fully deterministic, even at temperature 0. Running the same r
 - Code is never executed, so failing tests and runtime behaviour cannot be detected.
 - Findings are only as good as the chosen Gemini model. Flash-Lite is fast and cheap but can miss subtle issues; set `GEMINI_MODEL` to a stronger model if your quota allows.
 - Redaction is best-effort: a credential in an unusual format could reach the model unmasked.
+- Absence-type problems (no tests, no CI, loose dependency bounds) are the least reliable category: on small repositories where these are the only issues, the model may report nothing.
