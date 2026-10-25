@@ -1,13 +1,21 @@
+@'
+# secrets and local environment
 .env
 .venv/
 venv/
+
+# caches
 __pycache__/
 *.py[cod]
 .pytest_cache/
 .pytest-tmp/
 .ruff_cache/
-# local audit output (sample_report.json is the one committed example)
-report.json
+
+# local audit output and traces (sample_report.json is the only output committed)
+out/
 reports/
 traces/
+report.json
 *.trace.jsonl
+'@ | Set-Content .gitignore -Encoding utf8
+

@@ -147,7 +147,7 @@ Compact state instead of re-sending the transcript, trimmed old tool output, bat
 python agent.py --repo https://github.com/paastha1/cicd-test-repo --output sample_report.json
 ```
 
-`cicd-test-repo` is a deliberately vulnerable repository of GitHub Actions workflows (hardcoded secrets in `env:` blocks, secrets echoed to logs, `set -x` and `curl -v` leaking tokens, secrets as command-line arguments, unsafe artifact uploads) plus one clean workflow that must not be flagged. The trace written next to it (`sample_report.json.trace.jsonl`) lists every tool call the model chose and why. To regenerate it, run the command above with your own key.
+`cicd-test-repo` is a deliberately vulnerable repository of GitHub Actions workflows (hardcoded secrets in `env:` blocks, secrets echoed to logs, `set -x` and `curl -v` leaking tokens, secrets as command-line arguments, unsafe artifact uploads) plus one clean workflow that must not be flagged. Each run also writes a tool-call trace (`<output>.trace.jsonl`) that lists every tool call the model chose and why; it is not committed. To regenerate the sample, run the command above with your own key.
 
 ## Validation performed
 
